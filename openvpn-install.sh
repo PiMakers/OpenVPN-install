@@ -16,12 +16,6 @@ if [[ ! -e /dev/net/tun ]]; then
 	exit 2
 fi
 
-# Check if CentOS 5
-if grep -qs "CentOS release 5" "/etc/redhat-release"; then
-	echo "CentOS 5 is too old and not supported"
-	exit 3
-fi
-
 if [[ -e /etc/debian_version ]]; then
 	OS="debian"
 	# Getting the version number, to verify that a recent version of OpenVPN is available
@@ -43,20 +37,12 @@ if [[ -e /etc/debian_version ]]; then
 			exit 4
 		fi
 	fi
-elif [[ -e /etc/fedora-release ]]; then
-	OS=fedora
-	IPTABLES='/etc/iptables/iptables.rules'
-	SYSCTL='/etc/sysctl.d/openvpn.conf'
-elif [[ -e /etc/centos-release || -e /etc/redhat-release || -e /etc/system-release ]]; then
-	OS=centos
-	IPTABLES='/etc/iptables/iptables.rules'
-	SYSCTL='/etc/sysctl.conf'
 elif [[ -e /etc/arch-release ]]; then
 	OS=arch
 	IPTABLES='/etc/iptables/iptables.rules'
 	SYSCTL='/etc/sysctl.d/openvpn.conf'
 else
-	echo "Looks like you aren't running this installer on a Debian, Ubuntu, CentOS or ArchLinux system"
+	echo "Looks like you aren't running this installer on a Raspbian, Ubuntu, or ArchLinux system"
 	exit 4
 fi
 
@@ -102,32 +88,31 @@ if [[ -e /etc/openvpn/server.conf ]]; then
 		echo ""
 		echo "Looks like OpenVPN is already installed"
 		echo ""
+		
 
-		echo "What do you want to do?"
-		echo "   1) Add a cert for a new user"
-		echo "   2) Revoke existing user cert"
-		echo "   3) Remove OpenVPN"
-		echo "   4) Exit"
-		read -rp "Select an option [1-4]: " option
+PS3='What do you want to do?'
+options=("Add a cert for a new user" "Revoke existing user cert" "Remove OpenVPN" "Exit")
 
-		case $option in
-			1)
-			echo ""
-			echo "Tell me a name for the client cert"
-			echo "Please, use one word only, no special characters"
-			read -rp "Client name: " -e -i newclient CLIENT
+select opt in "${options[@]}"
+do
+    case $opt in
+        "Add a cert for a new user")
+		echo ""
+		echo "Tell me a name for the client cert"
+		echo "Please, use one word only, no special characters"
+		read -rp "Client name: " -e -i newclient CLIENT
 
-			cd /etc/openvpn/easy-rsa/ || return
-			./easyrsa build-client-full $CLIENT nopass
+		cd /etc/openvpn/easy-rsa/ || return
+		./easyrsa build-client-full $CLIENT nopass
 
-			# Generates the custom client.ovpn
-			newclient "$CLIENT"
+		# Generates the custom client.ovpn
+		newclient "$CLIENT"
 
-			echo ""
-			echo "Client $CLIENT added, certs available at $homeDir/$CLIENT.ovpn"
-			exit
-			;;
-			2)
+		echo ""
+		echo "Client $CLIENT added, certs available at $homeDir/$CLIENT.ovpn"
+		exit
+		;;
+        "Revoke existing user cert")
 			NUMBEROFCLIENTS=$(tail -n +2 /etc/openvpn/easy-rsa/pki/index.txt | grep -c "^V")
 			if [[ "$NUMBEROFCLIENTS" = '0' ]]; then
 				echo ""
@@ -162,7 +147,7 @@ if [[ -e /etc/openvpn/server.conf ]]; then
 			echo "Exiting..."
 			exit
 			;;
-			3)
+	"Remove OpenVPN")
 			echo ""
 			read -rp "Do you really want to remove OpenVPN? [y/n]: " -e -i n REMOVE
 			if [[ "$REMOVE" = 'y' ]]; then
@@ -215,9 +200,13 @@ if [[ -e /etc/openvpn/server.conf ]]; then
 			fi
 			exit
 			;;
-			4) exit;;
-		esac
-	done
+        "Exit")
+            break
+            ;;
+        *) echo "invalid option $REPLY";;
+    esac
+done
+
 else
 	clear
 	echo "Welcome to the secure OpenVPN installer (github.com/Angristan/OpenVPN-install)"

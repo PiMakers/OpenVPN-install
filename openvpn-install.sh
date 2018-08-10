@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Secure OpenVPN server installer for Debian, Ubuntu, CentOS and Arch Linux
+# Secure OpenVPN server installer for Debian, Ubuntu and Arch Linux
 # https://github.com/Angristan/OpenVPN-install
 
 
